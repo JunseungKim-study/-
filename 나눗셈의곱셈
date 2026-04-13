@@ -1,0 +1,179 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define MAX_TERMS 1000
+
+typedef struct {
+    float coef;
+    int exp_x;
+    int exp_y;
+    int exp_z;
+} polynomial;
+
+polynomial terms[MAX_TERMS];
+int avail = 0;
+
+int compare(const void* a, const void* b) {
+    polynomial* p1 = (polynomial*)a;
+    polynomial* p2 = (polynomial*)b;
+    if (p1->exp_y != p2->exp_y) return p2->exp_y - p1->exp_y;
+    if (p1->exp_x != p2->exp_x) return p2->exp_x - p1->exp_x;
+    return p2->exp_z - p1->exp_z;
+}
+
+void attach_or_update(float coef, int ex, int ey, int ez, int Cs) {
+    for (int i = Cs; i < avail; i++) {
+        if (terms[i].exp_x == ex && terms[i].exp_y == ey && terms[i].exp_z == ez) {
+            terms[i].coef += coef;
+            return;
+        }
+    }
+    if (avail < MAX_TERMS) {
+        terms[avail].coef = coef;
+        terms[avail].exp_x = ex;
+        terms[avail].exp_y = ey;
+        terms[avail].exp_z = ez;
+        avail++;
+    }
+}
+
+void multPoly(int As, int Ae, int Bs, int Be, int* Cs, int* Ce) {
+    *Cs = avail;
+    for (int i = As; i <= Ae; i++) {
+        for (int j = Bs; j <= Be; j++) {
+            float n_coef = terms[i].coef * terms[j].coef;
+            int n_x = terms[i].exp_x + terms[j].exp_x;
+            int n_y = terms[i].exp_y + terms[j].exp_y;
+            int n_z = terms[i].exp_z + terms[j].exp_z;
+
+            if (n_coef != 0) {
+                attach_or_update(n_coef, n_x, n_y, n_z, *Cs);
+            }
+        }
+    }
+    *Ce = avail - 1;
+
+    int num = *Ce - *Cs + 1;
+    if (num > 1) {
+        qsort(&terms[*Cs], num, sizeof(polynomial), compare);
+    }
+}
+
+void printPoly(int s, int e) {
+    int first = 1;
+    int all_zero = 1;
+
+    for (int i = s; i <= e; i++) {
+        if (terms[i].coef == 0) continue;
+        all_zero = 0;
+
+        if (!first && terms[i].coef > 0) printf(" + ");
+        else if (terms[i].coef < 0) {
+            if (first) printf("-");
+            else printf(" - ");
+        }
+
+        float abs_c = fabs(terms[i].coef);
+        int is_const = (terms[i].exp_x == 0 && terms[i].exp_y == 0 && terms[i].exp_z == 0);
+
+        if (abs_c != 1 || is_const) {
+            if (abs_c == (int)abs_c) printf("%d", (int)abs_c);
+            else printf("%.4f", abs_c);
+        }
+
+        if (terms[i].exp_x > 0) {
+            if (terms[i].exp_x == 1) printf("x");
+            else printf("x^%d", terms[i].exp_x);
+        }
+        if (terms[i].exp_z > 0) {
+            if (terms[i].exp_z == 1) printf("z");
+            else printf("z^%d", terms[i].exp_z);
+        }
+        if (terms[i].exp_y > 0) {
+            if (terms[i].exp_y == 1) printf("y");
+            else printf("y^%d", terms[i].exp_y);
+        }
+        first = 0;
+    }
+
+    if (all_zero) printf("0");
+    printf("\n");
+}
+
+int main() {
+    int As, Ae, Bs, Be, Cs, Ce;
+
+    As = avail;
+    terms[avail++] = (polynomial){ 3, 0, 7, 0 };
+    terms[avail++] = (polynomial){ 4, 4, 0, 0 };
+    terms[avail++] = (polynomial){ -1, 0, 0, 0 };
+    Ae = avail - 1;
+
+    Bs = avail;
+    terms[avail++] = (polynomial){ 5, 4, 0, 0 };
+    terms[avail++] = (polynomial){ -3, 0, 2, 0 };
+    terms[avail++] = (polynomial){ 7, 0, 0, 0 };
+    Be = avail - 1;
+
+    printf("1) test case 결과:\n");
+    multPoly(As, Ae, Bs, Be, &Cs, &Ce);
+    printPoly(Cs, Ce);
+    printf("\n");
+
+    As = avail;
+    terms[avail++] = (polynomial){ 4, 0, 7, 0 };
+    terms[avail++] = (polynomial){ -4, 4, 0, 0 };
+    terms[avail++] = (polynomial){ -1, 0, 0, 0 };
+    Ae = avail - 1;
+
+    Bs = avail;
+    terms[avail++] = (polynomial){ 2, 0, 7, 0 };
+    terms[avail++] = (polynomial){ -3, 1, 0, 0 };
+    terms[avail++] = (polynomial){ 1, 0, 0, 0 };
+    Be = avail - 1;
+
+    printf("2) general case 결과:\n");
+    multPoly(As, Ae, Bs, Be, &Cs, &Ce);
+    printPoly(Cs, Ce);
+    printf("\n");
+
+    As = avail;
+    terms[avail++] = (polynomial){ 15, 4, 7, 0 };
+    terms[avail++] = (polynomial){ -9, 0, 9, 0 };
+    terms[avail++] = (polynomial){ 21, 0, 7, 0 };
+    terms[avail++] = (polynomial){ 20, 8, 0, 0 };
+    Ae = avail - 1;
+
+    Bs = avail;
+    terms[avail++] = (polynomial){ -12, 4, 2, 0 };
+    terms[avail++] = (polynomial){ 23, 4, 0, 0 };
+    terms[avail++] = (polynomial){ 3, 0, 2, 0 };
+    terms[avail++] = (polynomial){ -7, 0, 0, 0 };
+    Be = avail - 1;
+
+    printf("3) extreme case 결과:\n");
+    multPoly(As, Ae, Bs, Be, &Cs, &Ce);
+    printPoly(Cs, Ce);
+    printf("\n");
+
+    As = avail;
+    terms[avail++] = (polynomial){ 15 * 1 * 6, 4, 7, 3 };
+    terms[avail++] = (polynomial){ -9 * 1, 0, 9, 2 };
+    terms[avail++] = (polynomial){ 21, 0, 7, 0 };
+    terms[avail++] = (polynomial){ 20, 8, 0, 0 };
+    Ae = avail - 1;
+
+    Bs = avail;
+    terms[avail++] = (polynomial){ -12 * 1 * 1, 4, 2, 2 };
+    terms[avail++] = (polynomial){ 23, 4, 0, 0 };
+    terms[avail++] = (polynomial){ 3, 0, 2, 0 };
+    terms[avail++] = (polynomial){ -7, 0, 0, 0 };
+    Be = avail - 1;
+
+    printf("4) extreme case 2 결과:\n");
+    multPoly(As, Ae, Bs, Be, &Cs, &Ce);
+    printPoly(Cs, Ce);
+
+    return 0;
+}
